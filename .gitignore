@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+Temp/
+experimental_analysis/DataLog/
+esp32/
