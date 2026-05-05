@@ -208,9 +208,12 @@ class ShdlcStartContinuousMeasurement(ShdlcStartContinuousMeasurementBase):
                 will not have access to other commands (EEPROM) until the device is reset.
     """
 
-    _MEASUREMENT_INTERVAL_100_MS = [0x00, 0x64]  # 100 ms 
-    _MEASUREMENT_INTERVAL_50_MS  = [0x00, 0x32]  # 50 ms
-    _MEASUREMENT_INTERVAL_20_MS  = [0x00, 0x14]  # 20 ms
+    _MEASUREMENT_INTERVAL_60000_MS = [0xEA, 0x60]  # 60 s
+    _MEASUREMENT_INTERVAL_10000_MS = [0x27, 0x10]  # 60 s
+    _MEASUREMENT_INTERVAL_1000_MS  = [0x03, 0xE8]  # 1 s
+    _MEASUREMENT_INTERVAL_100_MS   = [0x00, 0x64]  # 100 ms 
+    _MEASUREMENT_INTERVAL_50_MS    = [0x00, 0x32]  # 50 ms
+    _MEASUREMENT_INTERVAL_20_MS    = [0x00, 0x14]  # 20 ms
 
     _I2C_MEAS_CMD_MEDIUM_WATER = [0x36, 0x08]    # Medium: H20 calibration
     _I2C_MEAS_CMD_MEDIUM_IPA   = [0x36, 0x15]    # Medium: Isopropyl Alcohol calibration

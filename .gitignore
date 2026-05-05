@@ -1,5 +1,8 @@
 __pycache__/
 *.pyc
 Temp/
+Logs/
+results/
 experimental_analysis/DataLog/
-esp32/
+.venv/
+.claude/

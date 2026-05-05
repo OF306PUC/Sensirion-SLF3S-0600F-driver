@@ -19,7 +19,7 @@ class MeasurementRingBuffer:
     """
     A thread-safe ring buffer to store measurements.
     """
-    def __init__(self, max_size=50):
+    def __init__(self, max_size=1000):
         self._buffer = deque(maxlen=max_size)
         self._lock = Lock()
 

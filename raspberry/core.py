@@ -2,10 +2,11 @@
 core.py library module.
 
 Provides core functionality for SHDLC data interpretation.
-- Flow rate: 16-bit signed integer number. (two's complement range: -32768 to 32767). 
+- Flow rate: 16-bit signed integer number. (two's complement range: -32768 to 32767).
     Sensor output internally saturates in +-3250 uLmin range so it will output within that range (scaled by 10 (ul/min)^{-1}).
 - Temperature: 16-bit signed integer number. (two's complement range: -32768 to 32767).
 """
+import struct
 
 # Default params (Linux-based system):
 SERIAL_PORT = "/dev/ttyUSB0"
@@ -38,6 +39,14 @@ EoI_RMS_FLOW_ULMIN_THRESHOLD = 0.09  # uL/min (Empirical threshold for RMS flow 
 # h  int16 temp
 # H  uint16 flags
 BIN_RECORD_FMT = ">dhhH"
+BIN_RECORD_SIZE = struct.calcsize(BIN_RECORD_FMT)   # 14 bytes per record
+
+# Binary file magic header: 12-byte magic string + 4-byte version uint32 = 16 bytes
+BIN_MAGIC = b'SLF3SLOG\x00\x00\x00\x01'             # 12-byte magic
+BIN_VERSION = 1                                       # uint32
+BIN_HEADER_FMT = '>12sI'
+BIN_HEADER_SIZE = struct.calcsize(BIN_HEADER_FMT)    # 16 bytes
+
 # Flushing period for logger
 FLUSH_EVERY = 10 # samples
 

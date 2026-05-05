@@ -10,84 +10,13 @@ from interface import ShdlcInterface
 from port import ShdlcSerialPort
 from utils import ErrorCodes
 
-import os 
-import time 
-import struct
+import logging
+import time
 import core
 import traceback
 import queue as queue_module
 
-
-
-def dual_logger(csv_filename, bin_filename, queue, end_of_infusion_detector, 
-                logger, stop_logger_event, sampling_interval=core.SAMPLING_INTERVAL): 
-    """
-    Threaded CSV-binary logger for SHDLC sensor data.
-    - Reads data from a queue and writes to CSV and binary files.
-    - Integrates flow to compute volume in mL.
-    """
-    try: 
-        flush_every_samples = core.FLUSH_EVERY 
-        counter = 0
-        integrated_volume = 0.0     # accumulated volume in uL
-
-        start_t_utc = None
-        end_t_utc = None
-
-        os.makedirs(core.DATA_DIR, exist_ok=True)
-        csv_path = os.path.join(core.DATA_DIR, csv_filename)
-        bin_path = os.path.join(core.DATA_DIR, bin_filename)
-        with open(csv_path, 'w') as f_csv, open(bin_path, 'wb') as f_bin: 
-            f_csv.write("UTC_Time,Flow_ul_min,Volume_uL,DeviceTemperature_degC,"\
-                    "Flag_Air,Flag_High_Flow,Exp_Smoothing,Flags_Value\n")
-            
-            while not stop_logger_event.is_set() or not queue.empty(): 
-                try: 
-                    item = queue.get(timeout=1.0)
-                except queue_module.Empty:
-                    continue
-                timestamp, flow_raw, temp_raw, flags_raw = item
-
-                if start_t_utc is None:
-                    start_t_utc = timestamp
-                
-                flow_uL_min, temp_c = core.interpret_flow_temp_raw(flow_raw, temp_raw)
-                flag_air, flag_high_flow, exp_smoothing, flags_value = core.interpret_flags_raw(flags_raw)
-                integrated_volume += (flow_uL_min * core.MIN_TO_SEC) * (sampling_interval / 1000.0)
-
-                flow_raw = core.u16_to_i16(flow_raw)
-                temp_raw = core.u16_to_i16(temp_raw)
-
-                if end_of_infusion_detector.update(timestamp=timestamp, flow_ulmin=flow_uL_min):
-                    end_t_utc = timestamp
-                    logger.log(
-                        f"End-of-infusion detected. Stopping. "\
-                        f"start_utc={start_t_utc}, end_utc={end_t_utc}, volume_uL={integrated_volume:.2f}", 
-                        context={
-                            "duration_s": end_t_utc - start_t_utc if start_t_utc and end_t_utc else None,
-                            "integrated_volume_uL": integrated_volume
-                        }
-                    )
-                    stop_logger_event.set()
-
-                # Write CSV record:
-                f_csv.write(f"{timestamp},{flow_uL_min:.4f},{integrated_volume:.4f},{temp_c:.4f}"
-                        f",{flag_air},{flag_high_flow},{exp_smoothing},{flags_value}\n")
-                # Write binary record: 
-                f_bin.write(struct.pack(core.BIN_RECORD_FMT, timestamp, \
-                                        flow_raw, temp_raw, flags_raw))
-                counter += 1
-                if counter % flush_every_samples == 0: 
-                    f_csv.flush()
-                    f_bin.flush()
-
-    except Exception as e:
-        logger.log_error(
-            ErrorCodes.LOGGER_FAILURE, 
-            f"Logger encountered an exception: {e}",
-            context=traceback.format_exc(),
-        )
-        stop_logger_event.set()
+log = logging.getLogger(__name__)
 
 
 def in_device_communication(
@@ -105,32 +34,28 @@ def in_device_communication(
             stop_code=ShdlcStopContinuousMeasurement._I2C_STOP_CODE
         )
         _, error  = interface.execute(slave_address, i2c_transceive_stop_cmd)
-        print("--- (1) Stopping continuous measurement ---")
-        if error: 
-            print("Error state from stop command:", error)
-        print("")
+        log.info("(1) Stopping continuous measurement")
+        if error:
+            log.warning("Stop command returned error state: %s", error)
         time.sleep(1)
 
         # I2C Transceive command to start continuous measurement
         i2c_transceive_start_cmd = ShdlcStartContinuousMeasurement(
-            measurement_interval=ShdlcStartContinuousMeasurement._MEASUREMENT_INTERVAL_100_MS,
+            measurement_interval=ShdlcStartContinuousMeasurement._MEASUREMENT_INTERVAL_10000_MS,
             i2c_medium_command=ShdlcStartContinuousMeasurement._I2C_MEAS_CMD_MEDIUM_WATER
         )
         _, error  = interface.execute(slave_address, i2c_transceive_start_cmd)
-        print("--- (2) Starting continuous measurement ---")
-        if error: 
-            print("Error state from start command:", error)
-        print("")
+        log.info("(2) Starting continuous measurement")
+        if error:
+            log.warning("Start command returned error state: %s", error)
         time.sleep(1)
 
         # I2C Transceive command to check continuous measurement status
         i2c_transceive_status_cmd = ShdlcGetContinuousMeasurementStatus()
         status_data, error  = interface.execute(slave_address, i2c_transceive_status_cmd)
-        print("--- (3) Continuous Measurement Status ---")
-        print("Status data received - measurement interval [ms]:", status_data)
-        if error: 
-            print("Error state from status command:", error)
-        print("")
+        log.info("(3) Measurement status — interval: %s ms", status_data)
+        if error:
+            log.warning("Status command returned error state: %s", error)
         time.sleep(1)
 
         # Read measurement data in a loop
@@ -146,8 +71,10 @@ def in_device_communication(
 
         seconds_to_log = 3600 * hours_to_log
         num_measurements = int(seconds_to_log * 1000 // sampling_interval)
-        print(f"Logging for {hours_to_log} hours, sampling interval: {sampling_interval} ms,"\
-              f" total measurements: {num_measurements}")
+        log.info(
+            "Acquisition started — duration: %.2f h  interval: %d ms  total samples: %d",
+            hours_to_log, sampling_interval, num_measurements,
+        )
         measurement_count = 0
         time.sleep(1)
 
@@ -162,13 +89,13 @@ def in_device_communication(
                 # reading data from sensor: 
                 # data is: (flow_ul_min, temp_c, flag_air, flag_high_flow, exp_smoothing)
                 data, error = interface.execute(slave_address, transceive_cmd)    
-                if error: 
+                if error:
                     logger.log_error(
                         ErrorCodes.SHDLC_ERROR_STATE,
                         "Error state received during measurement read.",
                         context=ring_buffer.snapshot()
                     )
-                    print("Error state received during measurement read.")
+                    log.error("Measurement read returned error state — skipping sample.")
                     continue
 
                 flow_raw, temp_raw, flags_raw = data
@@ -181,10 +108,10 @@ def in_device_communication(
                 except queue_module.Full:
                     logger.log_error(
                         ErrorCodes.QUEUE_FULL,
-                        "Data queue is full. Dropping measurement.", 
+                        "Data queue is full. Dropping measurement.",
                         context=ring_buffer.snapshot()
                     )
-                    print("Warning: Data queue is full. Dropping measurement.")
+                    log.warning("Data queue full — measurement dropped.")
 
                 t_now = time.time()
                 sleep_time = deadline - t_now
@@ -208,11 +135,10 @@ def in_device_communication(
                 context=traceback.format_exc(),
             )
 
-        finally: 
-            # Send stop command before ending
+        finally:
             _, error  = interface.execute(slave_address, i2c_transceive_stop_cmd)
-            print("--- Stopping continuous measurement (shutdown) ---")
-            if error: 
-                print("Error state from stop command:", error)
-            stop_main_thread_event.set()        
+            log.info("Stopping continuous measurement (shutdown)")
+            if error:
+                log.warning("Stop command (shutdown) returned error state: %s", error)
+            stop_main_thread_event.set()
             
