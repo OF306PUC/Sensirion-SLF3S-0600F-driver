@@ -5,14 +5,16 @@ WORKDIR /app
 COPY raspberry/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY raspberry/ ./raspberry/
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gosu \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user; add to dialout for serial port access
-RUN useradd -m logger && usermod -aG dialout logger && \
-    mkdir -p /app/raspberry/Logs /app/raspberry/Temp && \
-    chown -R logger:logger /app/raspberry/Logs /app/raspberry/Temp
-USER logger
+COPY raspberry/ ./raspberry/
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+RUN useradd -m logger && usermod -aG dialout logger
 
 WORKDIR /app/raspberry
 
-ENTRYPOINT ["python3", "main.py"]
+ENTRYPOINT ["/entrypoint.sh"]

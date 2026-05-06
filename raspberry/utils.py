@@ -36,7 +36,7 @@ class Logger:
     def __init__(self, path):
         self.path = path
         self._lock = Lock()
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        os.makedirs(path, exist_ok=True)
 
     def log(self, message, context=None):
         ts = time.time()

@@ -6,3 +6,4 @@ results/
 experimental_analysis/DataLog/
 .venv/
 .claude/
+.env/

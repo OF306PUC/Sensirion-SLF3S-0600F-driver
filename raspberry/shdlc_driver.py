@@ -26,6 +26,26 @@ def in_device_communication(
     Threaded SHDLC device communication via serial port.
     - Reads data from the SHDLC device and puts it into a queue.
     """
+    try:
+        _run_communication(port, baudrate, queue, slave_address, logger, ring_buffer,
+                           stop_logger_event, stop_main_thread_event, hours_to_log, sampling_interval)
+    except Exception as e:
+        log.error("Fatal: communication thread failed on startup: %s", e, exc_info=True)
+    finally:
+        stop_main_thread_event.set()
+
+def _run_communication(
+        port, 
+        baudrate, 
+        queue, 
+        slave_address, 
+        logger, 
+        ring_buffer, 
+        stop_logger_event,
+        stop_main_thread_event, 
+        hours_to_log, 
+        sampling_interval
+    ):
     with ShdlcSerialPort(port=port, baudrate=baudrate) as shdlc_port:
         interface = ShdlcInterface(port=shdlc_port)
 
@@ -82,7 +102,7 @@ def in_device_communication(
 
             deadline = time.time()
             while not stop_logger_event.is_set(): 
-                if measurement_count > num_measurements:
+                if measurement_count >= num_measurements:
                     stop_logger_event.set()
                 
                 deadline += sampling_interval / 1000

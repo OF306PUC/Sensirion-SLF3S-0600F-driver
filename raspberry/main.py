@@ -31,7 +31,6 @@ def _setup_logging() -> None:
 
     root = logging.getLogger()
     root.setLevel(logging.INFO)
-    # Avoid duplicate handlers if called more than once
     root.handlers.clear()
 
     console = logging.StreamHandler(sys.stdout)
@@ -60,8 +59,8 @@ def parse_args():
         help=f"Serial port (default: {core.SERIAL_PORT})")
     parser.add_argument("--baudrate", type=int, default=core.BAUDRATE,
         help=f"Baud rate (default: {core.BAUDRATE})")
-    parser.add_argument("--slave-address", type=int, default=core.SLAVE_ADDRESS,
-        help=f"SHDLC slave address (default: {core.SLAVE_ADDRESS:#04x})")
+    parser.add_argument("--slave-address", type=int, default=core.SHDLC_SLAVE_ADDRESS,
+        help=f"SHDLC slave address (default: {core.SHDLC_SLAVE_ADDRESS:#04x})")
 
     # Logging parameters
     parser.add_argument("--hours-to-log", type=float, default=core.HOURS_TO_LOG,
@@ -116,7 +115,7 @@ def main():
         "pump_lot":       args.pump_lot,
         "fluid":          args.fluid,
         "raspberry_id":   args.raspberry_id,
-        "f_ro_hz":        sampling_interval_ms,
+        "f_ro_hz":        round(1000.0 / sampling_interval_ms, 4),
         "sampling_ms":    sampling_interval_ms,
     }
 

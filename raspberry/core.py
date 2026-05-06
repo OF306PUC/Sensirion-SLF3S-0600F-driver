@@ -11,10 +11,10 @@ import struct
 # Default params (Linux-based system):
 SERIAL_PORT = "/dev/ttyUSB0"
 BAUDRATE = 115200
-SLAVE_ADDRESS = 0x00          # Default I2C slave address for the SL
+SHDLC_SLAVE_ADDRESS = 0x00    # Default I2C slave address for the SL
 QUEUE_MAXSIZE = 1000          # Max size of the data queue
 HOURS_TO_LOG = 48             # Default logging duration in hours (Accoding to Baxter infusion pump lasting time)
-SAMPLING_INTERVAL = 500       # Sampling interval in seconds (10 Hz)
+SAMPLING_INTERVAL = 10000     # Sampling interval in milliseconds (0.1 Hz)
 
 DATA_DIR = "Temp/"
 LOGGER_PATH = "Logs/"

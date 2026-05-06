@@ -209,7 +209,7 @@ class ShdlcStartContinuousMeasurement(ShdlcStartContinuousMeasurementBase):
     """
 
     _MEASUREMENT_INTERVAL_60000_MS = [0xEA, 0x60]  # 60 s
-    _MEASUREMENT_INTERVAL_10000_MS = [0x27, 0x10]  # 60 s
+    _MEASUREMENT_INTERVAL_10000_MS = [0x27, 0x10]  # 10 s
     _MEASUREMENT_INTERVAL_1000_MS  = [0x03, 0xE8]  # 1 s
     _MEASUREMENT_INTERVAL_100_MS   = [0x00, 0x64]  # 100 ms 
     _MEASUREMENT_INTERVAL_50_MS    = [0x00, 0x32]  # 50 ms
@@ -354,7 +354,7 @@ class ShdlcGetLastMeasurement(ShdlcGetLastMeasurementBase):
         data.extend(signals)
         super(ShdlcGetLastMeasurement, self).__init__(
             data=data, max_response_time=0.1,
-            min_response_length=2, max_response_length=6
+            min_response_length=2, max_response_length=9
         )
 
     def interpret_response(self, data): 
