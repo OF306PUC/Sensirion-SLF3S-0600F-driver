@@ -1,9 +1,10 @@
 services:
-  logger:
+  
+  shdlc-reader:
     build: .
     restart: always
-    group_add:
-      - dialout
+    group_add:  # add plugdev group for rapsberry pi
+      - "46"
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
     volumes:
