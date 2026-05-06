@@ -30,7 +30,7 @@ docker build -t "$IMAGE" .
 # container, giving reliable access to /dev/ttyUSB0 (or whichever DEVICE is
 # set). This is more robust on Raspberry Pi than --device + --group-add.
 # NOTE: avoid exposing extra ports on this container given the wider /dev access.
-docker run --rm \
+docker run --rm -d \
     --name slf3s-logger \
     --privileged \
     --volume /dev:/dev \

@@ -18,10 +18,10 @@ This project implements a **long-running data logger** for the Sensirion SLF3S-0
 
 ### Execution model
 
-- The logger runs inside a **Docker container**, started manually via SSH
-- The container **continues running after SSH disconnect** (`restart: on-failure:3`)
+- The logger runs inside a **Docker container**, launched via `run.sh`
+- `run.sh` runs detached (`-d`) — the container keeps running after SSH disconnect
 - Data is written to host-mounted volumes (`./data/`, `./logs/`) and survives container restarts
-- `docker compose down` sends SIGTERM → logger writes the `INTERRUPTED` footer before exiting
+- Stopping the container (`docker stop`) sends SIGTERM → logger writes the `INTERRUPTED` footer before exiting
 
 ---
 
@@ -74,11 +74,16 @@ timedatectl show -p NTPSynchronized   # expect: NTPSynchronized=yes
 sensirion-SLF3S-0600F-driver/
 ├── README.md
 ├── Dockerfile
-├── docker-compose.yml
+├── run.sh                       ← build & launch the Docker container
 ├── .env.template
 ├── .dockerignore
-├── analysis/
-│   └── analyse.py               ← post-experiment analysis script
+├── experimental_analysis/
+│   ├── analyse.py               ← post-experiment analysis script
+│   ├── utils.py                 ← shared analysis helpers
+│   ├── utils_mpl.py             ← matplotlib utilities
+│   ├── SLF3S-0600F_filters.py  ← filter frequency-response explorer
+│   ├── requirements.txt         ← analysis dependencies
+│   └── Temp/                    ← sample data for local analysis
 └── raspberry/
     ├── main.py                  ← entry point
     ├── data_logger.py           ← CSV + binary logger (metadata, sample_index, footer)
@@ -108,13 +113,13 @@ sensirion-SLF3S-0600F-driver/
 
 ## 5. Running the data-acquisition system (Docker)
 
-The logger runs inside a Docker container for process isolation, automatic
-restart on failure, and clean log management. Data persists in `./data/`
-and `./logs/` on the host regardless of container lifecycle.
+The logger runs inside a Docker container for process isolation and clean log
+management. Data persists in `./data/` and `./logs/` on the host regardless of
+container lifecycle.
 
-> **Serial port access**: the `dialout` group grants access to `/dev/ttyUSB0`.
-> The container user is already added to this group in the `Dockerfile`.
-> On the host, ensure your user also belongs to `dialout`:
+> **Serial port access**: `run.sh` passes `--privileged --volume /dev:/dev` so
+> the container has reliable access to `/dev/ttyUSB0`.  
+> On the host, ensure your user belongs to `dialout`:
 > `sudo usermod -aG dialout $USER` (log out and back in to apply).
 
 ### 5.1 Clone the project
@@ -136,26 +141,25 @@ nano .env   # set CONFIG, EXPERIMENT_REP, PUMP_LOT, FLUID, HOURS, etc.
 ```
 
 All parameters are injected into the container at runtime, so the exact
-command that ran is always visible in `docker compose logs`.
+command that ran is always visible in the container logs.
 
 ---
 
 ### 5.3 Start the logger
 
 ```bash
-docker compose up --build -d
+bash run.sh
 ```
 
-- `--build` rebuilds the image if `raspberry/` has changed (safe to omit on
-  subsequent runs when the code is unchanged).
-- `-d` runs in detached (background) mode.
+`run.sh` builds the image (if needed) and starts the container detached —
+it keeps running after SSH disconnect.
 
 ---
 
 ### 5.4 Follow live events
 
 ```bash
-docker compose logs -f
+docker logs -f slf3s-logger
 ```
 
 ---
@@ -163,7 +167,7 @@ docker compose logs -f
 ### 5.5 Check status
 
 ```bash
-docker compose ps
+docker ps
 ```
 
 ---
@@ -171,7 +175,7 @@ docker compose ps
 ### 5.6 Stop cleanly
 
 ```bash
-docker compose down
+docker stop slf3s-logger
 ```
 
 Docker sends SIGTERM → logger writes the `INTERRUPTED` footer sentinel
@@ -215,23 +219,32 @@ binary format specification.
 
 ## 7. Post-experiment analysis
 
+Install dependencies once:
+
 ```bash
-python3 analysis/analyse.py data/C0_rep_1.csv [data/C1_rep_1.csv ...] \
+pip install -r experimental_analysis/requirements.txt
+```
+
+Run the analysis:
+
+```bash
+python3 experimental_analysis/analyse.py data/C0_rep_1.csv [data/C1_rep_1.csv ...] \
     --output-dir results/ \
-    --plot-format pdf \
     --zero-drift-min 60 \
     --empty-pump-min 30
 ```
 
-Per-experiment outputs (in `results/{experiment_rep}/`):
+Per-experiment outputs (in `results/{CONFIG}_{REP}/`):
 
 | File | Content |
 |------|---------|
 | `stats.json` | Zero-drift µ/σ/threshold, V_disp, T_eff, cross-correlation lag and r_max |
-| `{REP}.pdf` | 3-panel figure: q(t), V_disp(t), T(t) with phase markers |
-| `{REP}.png` | Same figure as PNG |
+| `{NAME}_flow_rate.pdf/png` | Flow rate q(t) with 1-hr moving average, ±5 % uncertainty band, and nominal references |
+| `{NAME}_temperature.pdf/png` | Device temperature T(t) |
+| `{NAME}_volume.pdf/png` | Cumulative dispensed volume V(t) vs corrected nominal |
+| `{NAME}_correlation.pdf/png` | Cross-correlation R_qT(ℓ) between flow and temperature |
 
-When more than one CSV is passed, a `comparison_q_profiles.pdf` overlay is
+When more than one CSV is passed, a `comparison_q_profiles.pdf/png` overlay is
 also produced at the root of `--output-dir`.
 
 ---
