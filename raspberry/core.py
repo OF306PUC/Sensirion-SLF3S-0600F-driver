@@ -50,6 +50,16 @@ BIN_HEADER_SIZE = struct.calcsize(BIN_HEADER_FMT)    # 16 bytes
 # Flushing period for logger
 FLUSH_EVERY = 10 # samples
 
+# Catheter configuration codes → descriptive names
+CONFIG_NAMES = {
+    "C0":  "Sin catéter (línea base)",
+    "C1a": "Contiplex 40 cm (3 orificios laterales) — bomba primera vez",
+    "C1b": "Contiplex 40 cm (3 orificios laterales) — bomba segunda vez",
+    "C2":  "Contiplex 40 cm + filtro Perifix 0,2 µm",
+    "C3":  "Contiplex 100 cm (3 orificios laterales)",
+    "C4":  "Catéter peridural pediátrico (orificio terminal)",
+}
+
 
 def u16_to_i16(x): 
     """
@@ -78,6 +88,10 @@ def interpret_flow_temp_raw(flow_raw, temp_raw):
 
     return flow_ul_min, temperature_degC
 
+def get_bit(value, n): 
+    """Return bit n of value (n=0 is LSB)"""
+    return (value >> n) & 1
+
 def interpret_flags_raw(flags_raw):
     """
     Interpret signaling flags raw data from SHDLC device.
@@ -85,10 +99,10 @@ def interpret_flags_raw(flags_raw):
     :param flags_raw: raw flags data bytes from SHDLC device
     :return: air_in_line_flag (bool), high_flow_flag (bool), exp_smoothing (bool)
     """
-    air_in_line_flag = int((flags_raw & 0x0001))  # Bit 0: Air in line flag
-    high_flow_flag  = int((flags_raw & 0x0002))   # Bit 1: High flow flag
-    exp_smoothing = int((flags_raw & 0x0020))     # Bit 5: Exponential smoothing active flag
-    flags_value = int(flags_raw)
+    air_in_line_flag = get_bit(flags_raw, 0)  # Bit 0: Air in line flag
+    high_flow_flag  = get_bit(flags_raw, 1)   # Bit 1: High flow flag
+    exp_smoothing = get_bit(flags_raw, 5)     # Bit 5: Exponential smoothing active flag
+    flags_value = int((flags_raw & 0xFFFF))
 
     return air_in_line_flag, high_flow_flag, exp_smoothing, flags_value
 

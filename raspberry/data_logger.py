@@ -49,6 +49,7 @@ def _write_csv_metadata(f, metadata: dict, start_utc: str) -> None:
     f.write(
         "# ── Experiment metadata ───────────────────────────────────────\n"
         f"# configuration   : {metadata.get('configuration', 'UNKNOWN')}\n"
+        f"# configuration_name: {metadata.get('configuration_name', 'UNKNOWN')}\n"
         f"# experiment_rep  : {metadata.get('experiment_rep', 'UNKNOWN')}\n"
         f"# pump_lot        : {metadata.get('pump_lot', 'UNKNOWN')}\n"
         f"# fluid           : {metadata.get('fluid', 'UNKNOWN')}\n"

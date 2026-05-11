@@ -110,13 +110,14 @@ def main():
     hours_to_log = args.hours_to_log
 
     metadata = {
-        "configuration":  args.configuration,
-        "experiment_rep": args.experiment_rep,
-        "pump_lot":       args.pump_lot,
-        "fluid":          args.fluid,
-        "raspberry_id":   args.raspberry_id,
-        "f_ro_hz":        round(1000.0 / sampling_interval_ms, 4),
-        "sampling_ms":    sampling_interval_ms,
+        "configuration":      args.configuration,
+        "configuration_name": core.CONFIG_NAMES.get(args.configuration, args.configuration),
+        "experiment_rep":     args.experiment_rep,
+        "pump_lot":           args.pump_lot,
+        "fluid":              args.fluid,
+        "raspberry_id":       args.raspberry_id,
+        "f_ro_hz":            round(1000.0 / sampling_interval_ms, 4),
+        "sampling_ms":        sampling_interval_ms,
     }
 
     queue_process = queue_module.Queue(maxsize=core.QUEUE_MAXSIZE)

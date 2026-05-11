@@ -258,13 +258,26 @@ also produced at the root of `--output-dir`.
 | `--slave-address` | `int` | SHDLC slave address | `0x00` |
 | `--hours-to-log` | `float` | Acquisition duration in hours | `48` |
 | `--sampling-ms` | `int` | Sampling interval in milliseconds | `500` |
-| `--configuration` | `str` | Catheter config label: C0, C1a, C1b, C2, C3, C4 | `UNKNOWN` |
+| `--configuration` | `str` | Catheter configuration code (see table below) | `UNKNOWN` |
 | `--experiment-rep` | `str` | Replicate identifier, e.g. `rep_1`, `rep_2` | `UNKNOWN` |
 | `--pump-lot` | `str` | Pump manufacturing lot number | `UNKNOWN` |
 | `--fluid` | `str` | Fluid description, e.g. `NaCl_240mL_bupiv_60mL` | `UNKNOWN` |
 | `--raspberry-id` | `str` | Raspberry Pi identifier (2, 9, or 10) | `UNKNOWN` |
 | `--dry-run` | flag | Generate synthetic data without a physical sensor | — |
 | `--verify-binary` | `str` | Validate an existing `.bin` file and exit | — |
+
+### Catheter configurations
+
+| Code | Description |
+|------|-------------|
+| `C0` | Sin catéter (línea base) |
+| `C1a` | Contiplex 40 cm (3 orificios laterales) — bomba primera vez |
+| `C1b` | Contiplex 40 cm (3 orificios laterales) — bomba segunda vez |
+| `C2` | Contiplex 40 cm + filtro Perifix 0,2 µm |
+| `C3` | Contiplex 100 cm (3 orificios laterales) |
+| `C4` | Catéter peridural pediátrico (orificio terminal) |
+
+C1a and C1b use the same catheter type; `a` is a first-use pump and `b` is a second-use pump to evaluate deterioration.
 
 ### Notes
 - Output files are named `{CONFIG}_{REP}.csv` / `{CONFIG}_{REP}.bin` inside `Temp/`.

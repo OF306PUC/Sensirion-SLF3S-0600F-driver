@@ -7,3 +7,5 @@ experimental_analysis/DataLog/
 .venv/
 .claude/
 .env/
+
+experiment_notes/
